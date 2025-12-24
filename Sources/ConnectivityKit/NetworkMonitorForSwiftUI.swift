@@ -1,22 +1,25 @@
 //
 //  NetworkMonitor.swift
+//  ConnectivityKit
 //
-//  Created by Noman belim on 24/12/25.
+//  Created by Noman Belim on 24/12/25
 //
 
 import Foundation
 import Network
 import SwiftUI
+
+// MARK: - Network Monitor (SwiftUI)
 @MainActor
 public final class NetworkMonitor: ObservableObject {
 
     public static let shared = NetworkMonitor()
 
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "NetworkMonitor")
-    @Published public private(set) var isReady: Bool = false
+    private let queue = DispatchQueue(label: "ConnectivityKit.NetworkMonitor")
 
-    @Published public private(set) var isConnected: Bool = true
+    @Published public private(set) var isReady: Bool = false
+    @Published public private(set) var isConnected: Bool = false
     @Published public var showConnectedBanner: Bool = false
 
     private init() {
@@ -26,7 +29,7 @@ public final class NetworkMonitor: ObservableObject {
 
                 let newStatus = (path.status == .satisfied)
 
-                // First update: set state silently
+                // First update: establish initial state silently
                 if !self.isReady {
                     self.isConnected = newStatus
                     self.isReady = true
@@ -53,32 +56,35 @@ public final class NetworkMonitor: ObservableObject {
         monitor.start(queue: queue)
     }
 }
-extension View {
+
+// MARK: - Public View Extension
+public extension View {
     func networkOverlay() -> some View {
         modifier(NetworkOverlay())
     }
 }
 
-struct NetworkOverlay: ViewModifier {
+// MARK: - Overlay Modifier
+public struct NetworkOverlay: ViewModifier {
 
     @ObservedObject private var monitor = NetworkMonitor.shared
 
-    func body(content: Content) -> some View {
+    public func body(content: Content) -> some View {
         ZStack {
             content
 
             VStack {
-                // 🔴 OFFLINE (persistent)
+                // Offline banner (persistent)
                 if monitor.isReady && !monitor.isConnected {
                     NetworkStatusBanner(
                         text: "No Internet Connection",
                         color: .red,
                         icon: "wifi.slash"
                     )
+                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
-
-                // 🟢 ONLINE (2 seconds only)
+                // Online banner (2 seconds only)
                 if monitor.showConnectedBanner {
                     NetworkStatusBanner(
                         text: "Internet Connected",
@@ -96,7 +102,8 @@ struct NetworkOverlay: ViewModifier {
         }
     }
 }
- 
+
+// MARK: - Banner View (Internal)
 struct NetworkStatusBanner: View {
 
     let text: String
@@ -119,8 +126,7 @@ struct NetworkStatusBanner: View {
         .background(color)
         .cornerRadius(14)
         .padding(.horizontal, 16)
+        .padding(.top, 8)
         .shadow(radius: 6)
     }
 }
-  
-
