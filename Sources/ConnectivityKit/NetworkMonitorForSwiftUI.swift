@@ -1,6 +1,5 @@
 //
-//  NetworkMonitorForSwiftUI.swift
-//  ConnectivityKit
+//  NetworkMonitor.swift
 //
 //  Created by Noman belim on 24/12/25.
 //
@@ -8,45 +7,41 @@
 import Foundation
 import Network
 import SwiftUI
-
 @MainActor
-public final class NetworkMonitorForSwiftUI: ObservableObject {
-    
-    public static let shared = NetworkMonitorForSwiftUI()
-    
+public final class NetworkMonitor: ObservableObject {
+
+    public static let shared = NetworkMonitor()
+
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "ConnectivityKit.SwiftUI")
-    
-    @Published public private(set) var isConnected: Bool = false
+    private let queue = DispatchQueue(label: "NetworkMonitor")
+    @Published public private(set) var isReady: Bool = false
+
+    @Published public private(set) var isConnected: Bool = true
     @Published public var showConnectedBanner: Bool = false
-    
-    private var isInitialUpdate = true
-    
+
     private init() {
         monitor.pathUpdateHandler = { [weak self] path in
             Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                
+                guard let self else { return }
+
                 let newStatus = (path.status == .satisfied)
-                
-                // On first update, just set initial state
-                if self.isInitialUpdate {
+
+                // First update: set state silently
+                if !self.isReady {
                     self.isConnected = newStatus
-                    self.isInitialUpdate = false
-                    print("[ConnectivityKit SwiftUI] Initial status: \(newStatus ? "Connected" : "Disconnected")")
+                    self.isReady = true
                     return
                 }
-                
+
                 let wasConnected = self.isConnected
                 self.isConnected = newStatus
-                
+
                 // Show green banner only on reconnect
                 if !wasConnected && newStatus {
-                    print("[ConnectivityKit SwiftUI] Reconnected - showing green banner")
                     self.showConnectedBanner = true
-                    
+
                     Task {
-                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
                         await MainActor.run {
                             self.showConnectedBanner = false
                         }
@@ -54,42 +49,36 @@ public final class NetworkMonitorForSwiftUI: ObservableObject {
                 }
             }
         }
+
         monitor.start(queue: queue)
     }
-    
-    deinit {
-        monitor.cancel()
-    }
 }
-
-// MARK: - SwiftUI View Extension
-public extension View {
+extension View {
     func networkOverlay() -> some View {
-        modifier(NetworkOverlayModifier())
+        modifier(NetworkOverlay())
     }
 }
 
-// MARK: - Network Overlay Modifier
-struct NetworkOverlayModifier: ViewModifier {
-    
-    @ObservedObject private var monitor = NetworkMonitorForSwiftUI.shared
-    
-    public func body(content: Content) -> some View {
+struct NetworkOverlay: ViewModifier {
+
+    @ObservedObject private var monitor = NetworkMonitor.shared
+
+    func body(content: Content) -> some View {
         ZStack {
             content
-            
+
             VStack {
-                // Red banner - stays visible while offline
-                if !monitor.isConnected {
+                // 🔴 OFFLINE (persistent)
+                if monitor.isReady && !monitor.isConnected {
                     NetworkStatusBanner(
                         text: "No Internet Connection",
                         color: .red,
                         icon: "wifi.slash"
                     )
-                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                
-                // Green banner - shows for 2 seconds on reconnect
+
+
+                // 🟢 ONLINE (2 seconds only)
                 if monitor.showConnectedBanner {
                     NetworkStatusBanner(
                         text: "Internet Connected",
@@ -98,7 +87,7 @@ struct NetworkOverlayModifier: ViewModifier {
                     )
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                
+
                 Spacer()
             }
             .animation(.spring(), value: monitor.isConnected)
@@ -107,22 +96,21 @@ struct NetworkOverlayModifier: ViewModifier {
         }
     }
 }
-
-// MARK: - Network Status Banner
+ 
 struct NetworkStatusBanner: View {
-    
+
     let text: String
     let color: Color
     let icon: String
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 18, weight: .semibold))
-            
+
             Text(text)
                 .font(.system(size: 15, weight: .medium))
-            
+
             Spacer()
         }
         .foregroundColor(.white)
@@ -131,7 +119,8 @@ struct NetworkStatusBanner: View {
         .background(color)
         .cornerRadius(14)
         .padding(.horizontal, 16)
-        .padding(.top, 8)
         .shadow(radius: 6)
     }
 }
+  
+
