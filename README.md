@@ -164,27 +164,13 @@ UserInfo:
 "isConnected": Bool
 "wasConnected": Bool
 ```
-
----
-
-# 🚫 Naming Conflicts (Solved)
-
-| Platform | Class                   |
-| -------- | ----------------------- |
-| SwiftUI  | `SwiftUINetworkMonitor` |
-| UIKit    | `NetworkMonitor`        |
-| UIKit UI | `NetworkBannerManager`  |
-
-✔️ No shared names
-✔️ Safe to use both in same project
-
+ 
 ---
 
 # 🧪 Tested Behavior
 
 | Scenario          | Result                  |
 | ----------------- | ----------------------- |
-| App launch        | No banner               |
 | Internet lost     | Red banner (persistent) |
 | Internet restored | Green banner (2s)       |
 | App background    | Safe                    |
