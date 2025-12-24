@@ -1,26 +1,33 @@
+//
+//  NetworkMonitorForUIKit.swift
+//  ConnectivityKit
+//
+//  Created by Noman belim on 24/12/25.
+//
+
 import Foundation
 import Network
 import UIKit
 
 // MARK: - Notification Extension
-extension Notification.Name {
-    static let networkStatusChanged = Notification.Name("networkStatusChanged")
+public extension Notification.Name {
+    static let networkStatusChanged = Notification.Name("ConnectivityKit.networkStatusChanged")
 }
 
-// MARK: - Network Monitor
- public final class NetworkMonitor {
-    static let shared = NetworkMonitor()
+// MARK: - UIKit Network Monitor
+public final class NetworkMonitorForUIKit {
+    public static let shared = NetworkMonitorForUIKit()
     
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "NetworkMonitor")
+    private let queue = DispatchQueue(label: "ConnectivityKit.UIKit")
     
-    private(set) var isConnected: Bool = false
+    public private(set) var isConnected: Bool = false
     private var hasStarted = false
     private var isInitialUpdate = true
     
     private init() {}
     
-    func start() {
+    public func start() {
         guard !hasStarted else { return }
         hasStarted = true
         
@@ -34,7 +41,7 @@ extension Notification.Name {
                 if self.isInitialUpdate {
                     self.isConnected = newStatus
                     self.isInitialUpdate = false
-                    print("Initial network status: \(newStatus ? "Connected" : "Disconnected")")
+                    print("[ConnectivityKit UIKit] Initial status: \(newStatus ? "Connected" : "Disconnected")")
                     return
                 }
                 
@@ -45,7 +52,7 @@ extension Notification.Name {
                 
                 self.isConnected = newStatus
                 
-                print("Network status changed - Was: \(oldStatus), Now: \(newStatus)")
+                print("[ConnectivityKit UIKit] Network changed - Was: \(oldStatus), Now: \(newStatus)")
                 
                 NotificationCenter.default.post(
                     name: .networkStatusChanged,
@@ -61,18 +68,17 @@ extension Notification.Name {
         monitor.start(queue: queue)
     }
     
-    func stop() {
+    public func stop() {
         monitor.cancel()
         hasStarted = false
     }
 }
 
-// MARK: - Network Banner Manager
-public final class NetworkBannerManager {
-    static let shared = NetworkBannerManager()
+// MARK: - UIKit Network Banner Manager
+public final class UIKitNetworkBanner {
+    public static let shared = UIKitNetworkBanner()
     
-    private var bannerWindow: UIWindow?
-    private var bannerView: NetworkBannerView?
+    private var bannerView: UIKitBannerView?
     
     private init() {
         NotificationCenter.default.addObserver(
@@ -87,8 +93,8 @@ public final class NetworkBannerManager {
         NotificationCenter.default.removeObserver(self)
     }
     
-    func startMonitoring() {
-        NetworkMonitor.shared.start()
+    public func startMonitoring() {
+        NetworkMonitorForUIKit.shared.start()
     }
     
     @objc private func handleNetworkChange(_ notification: Notification) {
@@ -97,7 +103,7 @@ public final class NetworkBannerManager {
             let wasConnected = notification.userInfo?["wasConnected"] as? Bool
         else { return }
         
-        print("Network changed - Was: \(wasConnected), Now: \(isConnected)")
+        print("[ConnectivityKit UIKit] Banner handler - Was: \(wasConnected), Now: \(isConnected)")
         
         // Lost internet connection
         if wasConnected && !isConnected {
@@ -109,7 +115,9 @@ public final class NetworkBannerManager {
             showOnlineBanner()
         }
     }
+    
     // MARK: - Banner Display
+    
     private func showOfflineBanner() {
         showBanner(
             text: "No Internet Connection",
@@ -118,6 +126,7 @@ public final class NetworkBannerManager {
             autoDismiss: false
         )
     }
+    
     private func showOnlineBanner() {
         showBanner(
             text: "Internet Connected",
@@ -126,6 +135,7 @@ public final class NetworkBannerManager {
             autoDismiss: true
         )
     }
+    
     private func showBanner(
         text: String,
         color: UIColor,
@@ -135,7 +145,7 @@ public final class NetworkBannerManager {
         // Remove existing banner first
         hideBanner()
         
-        print("Attempting to show banner: \(text)")
+        print("[ConnectivityKit UIKit] Showing banner: \(text)")
         
         // Get the key window from the active scene
         guard let windowScene = UIApplication.shared.connectedScenes
@@ -143,12 +153,12 @@ public final class NetworkBannerManager {
             .first(where: { $0.activationState == .foregroundActive }),
               let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow })
         else {
-            print("Failed to get window scene or key window")
+            print("[ConnectivityKit UIKit] ❌ Failed to get window scene or key window")
             return
         }
         
         // Create banner view
-        let banner = NetworkBannerView(
+        let banner = UIKitBannerView(
             text: text,
             color: color,
             icon: icon
@@ -176,7 +186,7 @@ public final class NetworkBannerManager {
         // Store reference
         self.bannerView = banner
         
-        print("Banner added to window, animating in...")
+        print("[ConnectivityKit UIKit] ✅ Banner added, animating...")
         
         // Animate in
         banner.alpha = 0
@@ -185,14 +195,14 @@ public final class NetworkBannerManager {
             banner.alpha = 1
             banner.transform = .identity
         } completion: { _ in
-            print("Banner animation complete")
+            print("[ConnectivityKit UIKit] ✅ Banner visible")
         }
         
         // Auto dismiss if needed
         if autoDismiss {
-            print("Banner will auto-dismiss in 2 seconds")
+            print("[ConnectivityKit UIKit] ⏱️ Banner will auto-dismiss in 2 seconds")
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                print("Auto-dismissing banner")
+                print("[ConnectivityKit UIKit] Dismissing banner")
                 self?.hideBanner()
             }
         }
@@ -200,27 +210,23 @@ public final class NetworkBannerManager {
     
     private func hideBanner() {
         guard let banner = bannerView else {
-            print("No banner to hide")
             return
         }
         
-        print("Hiding banner...")
+        print("[ConnectivityKit UIKit] Hiding banner...")
         
         UIView.animate(withDuration: 0.3, animations: {
             banner.alpha = 0
             banner.transform = CGAffineTransform(translationX: 0, y: -20)
         }) { [weak self] _ in
-            print("Banner hidden, removing from view")
             banner.removeFromSuperview()
             self?.bannerView = nil
-            self?.bannerWindow?.isHidden = true
-            self?.bannerWindow = nil
         }
     }
 }
 
-// MARK: - Network Banner View
-public final class NetworkBannerView: UIView {
+// MARK: - UIKit Banner View
+final class UIKitBannerView: UIView {
     private let iconView = UIImageView()
     private let label = UILabel()
     

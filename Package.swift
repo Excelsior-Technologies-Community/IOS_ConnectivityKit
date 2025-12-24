@@ -15,11 +15,7 @@ let package = Package(
     targets: [
         .target(
             name: "ConnectivityKit",
-            path: "Sources/ConnectivityKit",
-            swiftSettings: [
-                // Enables SwiftUI + UIKit coexistence cleanly
-                .define("SPM_BUILD")
-            ]
+            path: "SOurces/ConnectivityKit"  // Note: Your folder is "SOurces" not "Sources"
         )
     ]
 )
