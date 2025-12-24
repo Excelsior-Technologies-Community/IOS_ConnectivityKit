@@ -8,7 +8,7 @@ extension Notification.Name {
 }
 
 // MARK: - Network Monitor
-final class NetworkMonitor {
+ public final class NetworkMonitor {
     static let shared = NetworkMonitor()
     
     private let monitor = NWPathMonitor()
@@ -68,7 +68,7 @@ final class NetworkMonitor {
 }
 
 // MARK: - Network Banner Manager
-final class NetworkBannerManager {
+public final class NetworkBannerManager {
     static let shared = NetworkBannerManager()
     
     private var bannerWindow: UIWindow?
@@ -220,7 +220,7 @@ final class NetworkBannerManager {
 }
 
 // MARK: - Network Banner View
-final class NetworkBannerView: UIView {
+public final class NetworkBannerView: UIView {
     private let iconView = UIImageView()
     private let label = UILabel()
     
