@@ -26,21 +26,10 @@ ConnectivityKit provides a **clean, production-ready internet connectivity indic
 If hosted on GitHub:
 
 ```
-https://github.com/yourname/ConnectivityKit
+https://github.com/Excelsior-Technologies-Community/IOS_ConnectivityKit
 ```
 
----
-
-## 📂 Module Structure
-
-```
-ConnectivityKit
-├── SwiftUINetworkMonitor.swift
-├── NetworkMonitor.swift
-├── NetworkBannerManager.swift
-└── NetworkBannerView.swift
-```
-
+ 
 ---
 
 # 🧩 SwiftUI Integration
